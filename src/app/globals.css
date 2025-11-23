@@ -25,15 +25,17 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
-/* Vynútená farba textu v poliach, aby nebol biely na bielom pozadí */
+/* Vynútená svetlá téma pre formuláre – aj v mobile pri dark mode */
 input,
 select,
 textarea {
-  color: #0f172a !important;  /* približne text-zinc-900 */
-  caret-color: #0f172a;       /* farba kurzora (blikajúca palička) */
+  background-color: #ffffff !important;   /* biele pozadie */
+  color: #0f172a !important;              /* tmavý text */
+  border-color: #d1d5db;
+  -webkit-text-fill-color: #0f172a !important; /* iOS/Chrome forced dark mode */
 }
 
-/* voliteľné, aby placeholder nebol príliš svetlý v dark mode */
+/* placeholder farba, aby bol viditeľný v oboch režimoch */
 input::placeholder,
 textarea::placeholder {
   color: #9ca3af;

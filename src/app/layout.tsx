@@ -2,9 +2,12 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { ServiceWorkerRegister } from "./ServiceWorkerRegister";
 
-export const metadata: Metadata = {
+export const metadata = {
   title: "Evidencia jázd",
-  description: "Evidencia jázd pre viac vozidiel a mesiacov",
+  description: "Evidencia jázd – Truck Roman",
+  themeColor: "#ffffff",
+  // toto je dôležité:
+  colorScheme: "light" as const,
 };
 
 export default function RootLayout({
@@ -15,21 +18,9 @@ export default function RootLayout({
   return (
     <html lang="sk">
       <head>
-        {/* PWA */}
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <meta name="theme-color" content="#4f46e5" />
-        <link rel="manifest" href="/manifest.json" />
-
-        {/* Ikony */}
-        <link rel="icon" href="/icon-192.png" sizes="192x192" />
-        <link rel="icon" href="/icon-512.png" sizes="512x512" />
-        <link rel="apple-touch-icon" href="/icon-192.png" />
+        <meta name="color-scheme" content="light" />
       </head>
-      <body>
-        {/* Registrácia SW na klientovi */}
-        <ServiceWorkerRegister />
-        {children}
-      </body>
+      <body>{children}</body>
     </html>
   );
 }
