@@ -1,17 +1,10 @@
 @import "tailwindcss";
 
-/* Svetlá téma je natvrdo */
+/* VŽDY svetlá téma – aj keď je systém v dark mode */
 :root {
+  color-scheme: light;
   --background: #ffffff;
   --foreground: #171717;
-}
-
-/* ŽIADNY DARK MODE — IGNORUJEME HO */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #ffffff;
-    --foreground: #171717;
-  }
 }
 
 body {
@@ -20,14 +13,14 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
-/* FORMULÁRE — viditeľné aj v mobile */
+/* FORMULÁRE – viditeľné aj v mobile / PWA */
 input,
 select,
 textarea {
-  background-color: #ffffff !important;
-  color: #111827 !important;
+  background-color: #ffffff !important;        /* biele pozadie */
+  color: #111827 !important;                   /* tmavý text */
   border-color: #d1d5db;
-  -webkit-text-fill-color: #111827 !important;
+  -webkit-text-fill-color: #111827 !important; /* mobilný Chrome / iOS dark mode */
 }
 
 input::placeholder,

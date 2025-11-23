@@ -1,13 +1,10 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { ServiceWorkerRegister } from "./ServiceWorkerRegister";
 
-export const metadata = {
-  title: "Evidencia jázd",
-  description: "Evidencia jázd – Truck Roman",
-  themeColor: "#ffffff",
-  // toto je dôležité:
-  colorScheme: "light" as const,
+export const metadata: Metadata = {
+  title: "Evidencia jázd – Truck Roman",
+  description: "Jednoduchá evidencia jázd pre tvoje vozidlá.",
+  themeColor: "#ffffff",         // svetlá farba pre PWA / prehliadač
 };
 
 export default function RootLayout({
@@ -18,6 +15,7 @@ export default function RootLayout({
   return (
     <html lang="sk">
       <head>
+        {/* donútime prehliadač brať len svetlú schému */}
         <meta name="color-scheme" content="light" />
       </head>
       <body>{children}</body>
