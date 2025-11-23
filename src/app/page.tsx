@@ -8,6 +8,9 @@ type DayRow = {
   startKm: number | null;
   endKm: number | null;
   diff: number | null;
+  consumption: number | null;
+  fuelRemaining: number | null;
+  refuel: number | null;      // NOVÉ
   route: string;
   note: string;
 };
@@ -20,6 +23,9 @@ type Vehicle = {
 const DAYS_IN_MONTH = 31;
 const STORAGE_PREFIX = "vozidlo-next-";
 const VEHICLES_STORAGE_KEY = `${STORAGE_PREFIX}vehicles`;
+
+// heslo z .env.local
+const APP_PASSWORD = process.env.NEXT_PUBLIC_APP_PASSWORD;
 
 const MONTHS = [
   { id: 1, label: "Január" },
@@ -42,12 +48,37 @@ function createEmptyRows(): DayRow[] {
     startKm: null,
     endKm: null,
     diff: null,
+    consumption: null,
+    fuelRemaining: null,
+    refuel: null,       // NOVÉ
     route: "",
     note: "",
   }));
 }
 
 export default function HomePage() {
+  // ====== HESLO ======
+  const [isAuthed, setIsAuthed] = useState(false);
+  const [passwordInput, setPasswordInput] = useState("");
+
+  // ak nie je APP_PASSWORD nastavené, appka je voľne prístupná
+  useEffect(() => {
+    if (!APP_PASSWORD) {
+      setIsAuthed(true);
+    }
+  }, []);
+
+  function handleLogin(e: React.FormEvent) {
+    e.preventDefault();
+    if (!APP_PASSWORD || passwordInput === APP_PASSWORD) {
+      setIsAuthed(true);
+      setPasswordInput("");
+    } else {
+      alert("Nesprávne heslo.");
+    }
+  }
+
+  // ====== pôvodná logika ======
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [currentVehicleId, setCurrentVehicleId] = useState<string>("");
   const [currentMonth, setCurrentMonth] = useState<number>(1);
@@ -67,9 +98,11 @@ export default function HomePage() {
           return;
         }
       }
-    } catch {}
+    } catch {
+      // ignore
+    }
 
-    const defaultVehicle: Vehicle = { id: "vozidlo-1", label: "Vozidlo 1" };
+    const defaultVehicle: Vehicle = { id: "vozidlo-1", label: "Moje vozidlo" };
     setVehicles([defaultVehicle]);
     setCurrentVehicleId(defaultVehicle.id);
   }, []);
@@ -82,7 +115,9 @@ export default function HomePage() {
         VEHICLES_STORAGE_KEY,
         JSON.stringify(vehicles)
       );
-    } catch {}
+    } catch {
+      // ignore
+    }
   }, [vehicles]);
 
   const storageKey =
@@ -115,7 +150,9 @@ export default function HomePage() {
     if (!loadedRows || !storageKey) return;
     try {
       window.localStorage.setItem(storageKey, JSON.stringify(rows));
-    } catch {}
+    } catch {
+      // ignore
+    }
   }, [rows, storageKey, loadedRows]);
 
   // update jednej bunky
@@ -145,13 +182,16 @@ export default function HomePage() {
         }
       }
 
-      // ručný zápis najazdených km
-      if (field === "diff") {
-        const num = value === "" ? null : Number(value.replace(",", "."));
-        row.diff = Number.isNaN(num) ? null : num;
-      }
+          if (
+            field === "diff" ||
+            field === "consumption" ||
+            field === "fuelRemaining" ||
+            field === "refuel"            // NOVÉ
+          ) {
+            const num = value === "" ? null : Number(value.replace(",", "."));
+            (row as any)[field] = Number.isNaN(num) ? null : num;
+          }
 
-      // textové polia
       if (field === "route" || field === "note") {
         (row as any)[field] = value;
       }
@@ -169,7 +209,21 @@ export default function HomePage() {
   const currentVehicleLabel = currentVehicle?.label ?? "Vozidlo";
 
   const currentMonthLabel =
-    MONTHS.find((m) => m.id === currentMonth)?.label ?? `Mesiac ${currentMonth}`;
+    MONTHS.find((m) => m.id === currentMonth)?.label ??
+    `Mesiac ${currentMonth}`;
+
+      const filledRowsCount = rows.filter((r) => {
+        return (
+          r.startKm != null ||
+          r.endKm != null ||
+          r.diff != null ||
+          r.consumption != null ||
+          r.fuelRemaining != null ||
+          r.refuel != null ||                        // NOVÉ
+          (r.route && r.route.trim() !== "") ||
+          (r.note && r.note.trim() !== "")
+        );
+      }).length;
 
   function handleAddVehicle() {
     const name = newVehicleName.trim();
@@ -186,72 +240,81 @@ export default function HomePage() {
     setNewVehicleName("");
   }
 
-  // EXPORT CSV – aktuálne vozidlo + mesiac
-  function exportCurrentToCSV() {
-    if (!rows.length) return;
+  function handleDeleteCurrentVehicle() {
+    if (!currentVehicleId) return;
 
-    const vehLabelSafe = currentVehicleLabel
-      .toLowerCase()
-      .replace(/\s+/g, "-")
-      .replace(/[^a-z0-9-]/g, "");
-
-    const filename = `evidencia-${vehLabelSafe || "vozidlo"}-${currentMonth}.csv`;
-
-    const header = [
-      "Deň",
-      "Tachometer začiatok",
-      "Tachometer koniec",
-      "Najazdené km",
-      "Trasa / účel",
-      "Poznámka",
-    ];
-
-    const lines: string[] = [];
-    lines.push(header.join(";"));
-
-    rows.forEach((r) => {
-      const hasData =
-        r.startKm != null ||
-        r.endKm != null ||
-        r.diff != null ||
-        (r.route && r.route.trim() !== "") ||
-        (r.note && r.note.trim() !== "");
-
-      if (!hasData) return;
-
-      const values = [
-        `${r.day}. ${currentMonthLabel}`,
-        r.startKm ?? "",
-        r.endKm ?? "",
-        r.diff ?? "",
-        r.route ?? "",
-        r.note ?? "",
-      ];
-
-      const line = values
-        .map((v) => `"${String(v).replace(/"/g, '""')}"`)
-        .join(";");
-      lines.push(line);
-    });
-
-    if (lines.length <= 1) {
-      alert("Nie je čo exportovať – žiadne vyplnené riadky.");
+    if (
+      !window.confirm(
+        `Naozaj zmazať vozidlo "${currentVehicleLabel}" vrátane všetkých jázd?`
+      )
+    ) {
       return;
     }
 
-    const csvContent = lines.join("\r\n");
-    const blob = new Blob([csvContent], {
-      type: "text/csv;charset=utf-8;",
-    });
+    try {
+      for (let m = 1; m <= 12; m++) {
+        const key = `${STORAGE_PREFIX}${currentVehicleId}-${m}`;
+        window.localStorage.removeItem(key);
+      }
+    } catch {
+      // ignore
+    }
 
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    setVehicles((prev) => {
+      const remaining = prev.filter((v) => v.id !== currentVehicleId);
+      if (remaining.length === 0) {
+        const def: Vehicle = { id: "vozidlo-1", label: "Moje vozidlo" };
+        setCurrentVehicleId(def.id);
+        return [def];
+      }
+      setCurrentVehicleId(remaining[0].id);
+      return remaining;
+    });
+  }
+
+  // API EXPORT
+  async function exportCurrentToCSV() {
+    if (!rows.length) return;
+
+    const payload = {
+      vehicleLabel: currentVehicleLabel,
+      month: currentMonth,
+      monthLabel: currentMonthLabel,
+      rows,
+    };
+
+    try {
+      const res = await fetch("/api/export", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        console.error("Export error", await res.text());
+        alert("Nepodarilo sa vytvoriť export (API chyba).");
+        return;
+      }
+
+      const blob = await res.blob();
+
+      const cd = res.headers.get("Content-Disposition") || "";
+      const match = cd.match(/filename="(.+?)"/i);
+      const fallbackName = "evidencia-export.csv";
+      const filename = match?.[1] ?? fallbackName;
+
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error(err);
+      alert("Chyba pri exporte (sieť alebo server).");
+    }
   }
 
   // TLAČ / PDF – aktuálne vozidlo + mesiac
@@ -261,6 +324,9 @@ export default function HomePage() {
         r.startKm != null ||
         r.endKm != null ||
         r.diff != null ||
+        r.consumption != null ||
+        r.fuelRemaining != null ||
+        r.refuel != null || // NOVÉ
         (r.route && r.route.trim() !== "") ||
         (r.note && r.note.trim() !== "")
       );
@@ -281,6 +347,9 @@ export default function HomePage() {
             <td>${r.startKm ?? ""}</td>
             <td>${r.endKm ?? ""}</td>
             <td>${r.diff ?? ""}</td>
+            <td>${r.consumption ?? ""}</td>
+            <td>${r.fuelRemaining ?? ""}</td>
+            <td>${r.refuel ?? ""}</td>
             <td>${(r.route ?? "").replace(/</g, "&lt;")}</td>
             <td>${(r.note ?? "").replace(/</g, "&lt;")}</td>
           </tr>
@@ -333,9 +402,7 @@ export default function HomePage() {
       text-align: right;
     }
     @media print {
-      button {
-        display: none;
-      }
+      button { display: none; }
     }
   </style>
 </head>
@@ -352,7 +419,10 @@ export default function HomePage() {
         <th>Tachometer začiatok</th>
         <th>Tachometer koniec</th>
         <th>Najazdené km</th>
-        <th>Trasa / účel</th>
+        <th>Spotreba</th>
+        <th>Zostatok nafty (L)</th>
+        <th>Tankovanie (L)</th>
+        <th>Trasa</th>
         <th>Poznámka</th>
       </tr>
     </thead>
@@ -363,7 +433,7 @@ export default function HomePage() {
       <tr>
         <td colspan="3">Spolu km za mesiac</td>
         <td class="text-right">${totalKm}</td>
-        <td colspan="2"></td>
+        <td colspan="5"></td>
       </tr>
     </tfoot>
   </table>
@@ -384,36 +454,39 @@ export default function HomePage() {
     printWindow.focus();
   }
 
-  function handleDeleteCurrentVehicle() {
-    if (!currentVehicleId) return;
-
-    if (
-      !window.confirm(
-        `Naozaj zmazať vozidlo "${currentVehicleLabel}" vrátane všetkých jázd?`
-      )
-    ) {
-      return;
-    }
-
-    try {
-      for (let m = 1; m <= 12; m++) {
-        const key = `${STORAGE_PREFIX}${currentVehicleId}-${m}`;
-        window.localStorage.removeItem(key);
-      }
-    } catch {}
-
-    setVehicles((prev) => {
-      const remaining = prev.filter((v) => v.id !== currentVehicleId);
-      if (remaining.length === 0) {
-        const def: Vehicle = { id: "vozidlo-1", label: "Vozidlo 1" };
-        setCurrentVehicleId(def.id);
-        return [def];
-      }
-      setCurrentVehicleId(remaining[0].id);
-      return remaining;
-    });
+  // ====== LOGIN OBRAZOVKA ======
+  if (!isAuthed) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-zinc-100">
+        <form
+          onSubmit={handleLogin}
+          className="w-full max-w-xs rounded-xl bg-white p-6 shadow-lg border border-zinc-200"
+        >
+          <h1 className="mb-4 text-lg font-semibold text-center">
+            Evidencia jázd
+          </h1>
+          <p className="mb-4 text-xs text-zinc-500 text-center">
+            Zadaj heslo pre prístup k aplikácii.
+          </p>
+          <input
+            type="password"
+            className="w-full rounded border border-zinc-300 px-3 py-2 text-sm mb-3"
+            placeholder="Heslo"
+            value={passwordInput}
+            onChange={(e) => setPasswordInput(e.target.value)}
+          />
+          <button
+            type="submit"
+            className="w-full rounded-full bg-zinc-900 text-white py-2 text-sm font-semibold hover:bg-zinc-800"
+          >
+            Prihlásiť sa
+          </button>
+        </form>
+      </div>
+    );
   }
 
+  // ====== HLAVNÁ APPKA ======
   return (
     <div className="min-h-screen bg-zinc-50 text-zinc-900 dark:bg-black dark:text-zinc-50">
       <main className="mx-auto max-w-5xl px-3 py-4 sm:px-4 sm:py-6">
@@ -463,34 +536,34 @@ export default function HomePage() {
 
         {/* INFO */}
         <div className="mb-4 text-xs text-zinc-600 sm:text-sm dark:text-zinc-400">
-          Dáta sa ukladajú pre každé vozidlo a mesiac zvlášť (v tomto prehliadači).
+          Dáta sa ukladajú pre každé vozidlo a mesiac zvlášť (v tomto
+          prehliadači).
         </div>
 
         {/* SPRÁVA VOZIDIEL */}
-        <div className="mb-4 grid gap-3 sm:mb-5 sm:grid-cols-2">
-          <div>
-            <div className="mb-1 text-[11px] font-semibold uppercase text-zinc-500">
-              Aktuálne vozidlo
-            </div>
-            <div className="rounded border border-zinc-300 bg-white px-2 py-1 text-sm">
+        <div className="mb-4 flex flex-col gap-3 sm:mb-5 sm:flex-row sm:items-start sm:justify-between">
+          {/* aktuálne vozidlo */}
+          <div className="w-full sm:w-1/2">
+            <div className="rounded border border-zinc-300 bg-white px-3 py-2 text-sm">
               {currentVehicleLabel}
             </div>
           </div>
 
-          <div>
+          {/* pridať nové vozidlo */}
+          <div className="w-full sm:w-1/2">
             <div className="mb-1 text-[11px] font-semibold uppercase text-zinc-500">
               Pridať nové vozidlo
             </div>
             <div className="flex gap-2">
               <input
                 type="text"
-                className="flex-1 rounded border border-zinc-300 bg-white px-2 py-1 text-sm"
+                className="flex-1 rounded border border-zinc-300 bg-white px-3 py-2 text-sm"
                 value={newVehicleName}
                 placeholder="Napr. Škoda Octavia KE123AB"
                 onChange={(e) => setNewVehicleName(e.target.value)}
               />
               <button
-                className="rounded border border-zinc-300 px-3 py-1 text-xs sm:text-sm hover:bg-zinc-100"
+                className="rounded border border-zinc-300 px-3 py-2 text-xs sm:text-sm hover:bg-zinc-100"
                 onClick={handleAddVehicle}
               >
                 Pridať
@@ -500,25 +573,37 @@ export default function HomePage() {
         </div>
 
         {/* AKCIE */}
-        <div className="mb-4 flex flex-wrap gap-2 text-xs">
+        <div className="mb-4 flex flex-col gap-2 text-xs sm:flex-row sm:flex-wrap">
           <button
-            className="rounded-full border border-zinc-300 px-4 py-1 font-semibold hover:bg-zinc-100"
+            className="w-full sm:w-auto rounded-full border border-zinc-300 px-4 py-2 font-semibold hover:bg-zinc-100"
             onClick={exportCurrentToCSV}
           >
             Exportovať (CSV)
           </button>
           <button
-            className="rounded-full border border-zinc-300 px-4 py-1 font-semibold hover:bg-zinc-100"
+            className="w-full sm:w-auto rounded-full border border-zinc-300 px-4 py-2 font-semibold hover:bg-zinc-100"
             onClick={printCurrent}
           >
             Tlačiť / PDF
           </button>
           <button
-            className="rounded-full border border-red-300 px-4 py-1 font-semibold text-red-700 hover:bg-red-50"
+            className="w-full sm:w-auto rounded-full border border-red-300 px-4 py-2 font-semibold text-red-700 hover:bg-red-50"
             onClick={handleDeleteCurrentVehicle}
           >
             Zmazať aktuálne vozidlo
           </button>
+        </div>
+
+        {/* SUMÁR MESIACA */}
+        <div className="mb-4 grid gap-3 text-sm sm:grid-cols-2">
+          <div className="flex items-center justify-between rounded-lg border border-zinc-200 bg-white px-3 py-2">
+            <span className="text-zinc-600">Spolu km za mesiac</span>
+            <span className="font-semibold">{show(totalKm)} km</span>
+          </div>
+          <div className="flex items-center justify-between rounded-lg border border-zinc-200 bg-white px-3 py-2">
+            <span className="text-zinc-600">Počet vyplnených dní</span>
+            <span className="font-semibold">{filledRowsCount}</span>
+          </div>
         </div>
 
         {/* MOBILNÝ LAYOUT – KARTIČKY */}
@@ -532,7 +617,8 @@ export default function HomePage() {
                 <span className="text-sm font-semibold">Deň {r.day}.</span>
                 {r.diff != null && (
                   <span className="text-xs text-zinc-500">
-                    Najazdené: <span className="font-semibold">{r.diff} km</span>
+                    Najazdené:{" "}
+                    <span className="font-semibold">{r.diff} km</span>
                   </span>
                 )}
               </div>
@@ -576,22 +662,59 @@ export default function HomePage() {
               </div>
 
               <div className="mb-2">
-                <div className="text-[11px] text-zinc-500">Trasa / účel</div>
+                <div className="text-[11px] text-zinc-500">Spotreba</div>
                 <input
-                  type="text"
-                  className="mt-0.5 w-full rounded border border-zinc-300 bg-white px-2 py-1 text-sm"
-                  value={r.route}
-                  onChange={(e) => updateRow(i, "route", e.target.value)}
+                  type="number"
+                  className="mt-0.5 w-full rounded border border-zinc-300 bg-white px-2 py-1 text-right text-sm"
+                  value={r.consumption ?? ""}
+                  onChange={(e) => updateRow(i, "consumption", e.target.value)}
+                  inputMode="numeric"
                 />
               </div>
 
-              <div>
+              <div className="mb-2">
+                <div className="text-[11px] text-zinc-500">
+                  Zostatok nafty (L)
+                </div>
+                <input
+                  type="number"
+                  className="mt-0.5 w-full rounded border border-zinc-300 bg-white px-2 py-1 text-right text-sm"
+                  value={r.fuelRemaining ?? ""}
+                  onChange={(e) =>
+                    updateRow(i, "fuelRemaining", e.target.value)
+                  }
+                  inputMode="numeric"
+                />
+              </div>
+
+              <div className="mb-2">
+              <div className="text-[11px] text-zinc-500">Tankovanie (L)</div>
+              <input
+                type="number"
+                className="mt-0.5 w-full rounded border border-zinc-300 bg-white px-2 py-1 text-right text-sm"
+                value={r.refuel ?? ""}
+                onChange={(e) => updateRow(i, "refuel", e.target.value)}
+                inputMode="numeric"
+              />
+            </div>
+
+              <div className="mb-2">
                 <div className="text-[11px] text-zinc-500">Poznámka</div>
                 <input
                   type="text"
                   className="mt-0.5 w-full rounded border border-zinc-300 bg-white px-2 py-1 text-sm"
                   value={r.note}
                   onChange={(e) => updateRow(i, "note", e.target.value)}
+                />
+              </div>
+
+              <div className="mb-2">
+                <div className="text-[11px] text-zinc-500">Trasa</div>
+                <input
+                  type="text"
+                  className="mt-0.5 w-full rounded border border-zinc-300 bg-white px-2 py-1 text-sm"
+                  value={r.route}
+                  onChange={(e) => updateRow(i, "route", e.target.value)}
                 />
               </div>
             </div>
@@ -605,28 +728,62 @@ export default function HomePage() {
 
         {/* DESKTOP TABUĽKA */}
         <div className="hidden md:block">
-          <div className="overflow-x-auto rounded-lg border border-zinc-200 bg-white shadow">
-            <table className="min-w-full border-collapse text-sm">
-              <thead className="bg-zinc-100 text-xs uppercase">
+          <div className="overflow-x-auto rounded-xl bg-white shadow">
+            <table className="min-w-full border border-blue-200 rounded-xl overflow-hidden text-sm">
+              <thead
+                className="
+                  bg-gradient-to-r
+                  from-rose-500
+                  via-purple-600
+                  to-blue-600
+                  text-white text-xs uppercase font-semibold shadow
+                "
+              >
                 <tr>
-                  <th className="border-b px-2 py-2">Deň</th>
-                  <th className="border-b px-2 py-2">Tachometer začiatok</th>
-                  <th className="border-b px-2 py-2">Tachometer koniec</th>
-                  <th className="border-b px-2 py-2">Najazdené km</th>
-                  <th className="border-b px-2 py-2">Trasa / účel</th>
-                  <th className="border-b px-2 py-2">Poznámka</th>
+                  <th className="border border-blue-200 px-2 py-2 w-[50px] rounded-tl-xl">
+                    Deň
+                  </th>
+                  <th className="border border-blue-200 px-2 py-2 w-[110px]">
+                    Tachometer začiatok
+                  </th>
+                  <th className="border border-blue-200 px-2 py-2 w-[110px]">
+                    Tachometer koniec
+                  </th>
+                  <th className="border border-blue-200 px-2 py-2 w-[110px]">
+                    Najazdené km
+                  </th>
+                  <th className="border border-blue-200 px-2 py-2 w-[110px]">
+                    Spotreba
+                  </th>
+                  <th className="border border-blue-200 px-2 py-2 w-[130px]">
+                    Zostatok nafty (L)
+                  </th>
+                  <th className="border border-blue-200 px-2 py-2 w-[130px]">
+                    Tankovanie (L)
+                  </th>
+                  <th className="border border-blue-200 px-2 py-2">
+                    Trasa
+                  </th>
+                  <th className="border border-blue-200 px-2 py-2 rounded-tr-xl">
+                    Poznámka
+                  </th>
                 </tr>
               </thead>
 
-              <tbody>
+              <tbody className="bg-white">
                 {rows.map((r, i) => (
-                  <tr key={r.day}>
-                    <td className="border-b px-2 py-1">{r.day}.</td>
+                  <tr
+                    key={r.day}
+                    className={i % 2 === 0 ? "bg-white" : "bg-zinc-50"}
+                  >
+                    <td className="border border-blue-200 px-2 py-1 w-[50px]">
+                      {r.day}.
+                    </td>
 
-                    <td className="border-b px-2 py-1">
+                    <td className="border border-blue-200 px-2 py-1 w-[110px]">
                       <input
                         type="number"
-                        className="w-full rounded border px-1 py-0.5"
+                        className="w-full rounded-md border border-blue-200 px-1 py-0.5"
                         value={r.startKm ?? ""}
                         onChange={(e) =>
                           updateRow(i, "startKm", e.target.value)
@@ -634,10 +791,10 @@ export default function HomePage() {
                       />
                     </td>
 
-                    <td className="border-b px-2 py-1">
+                    <td className="border border-blue-200 px-2 py-1 w-[110px]">
                       <input
                         type="number"
-                        className="w-full rounded border px-1 py-0.5"
+                        className="w-full rounded-md border border-blue-200 px-1 py-0.5"
                         value={r.endKm ?? ""}
                         onChange={(e) =>
                           updateRow(i, "endKm", e.target.value)
@@ -645,47 +802,88 @@ export default function HomePage() {
                       />
                     </td>
 
-                    <td className="border-b px-2 py-1">
+                    <td className="border border-blue-200 px-2 py-1 w-[110px]">
                       <input
                         type="number"
-                        className="w-full rounded border px-1 py-0.5 text-right"
+                        className="w-full rounded-md border border-blue-200 px-1 py-0.5 text-right"
                         value={r.diff ?? ""}
                         onChange={(e) => updateRow(i, "diff", e.target.value)}
                       />
                     </td>
 
-                    <td className="border-b px-2 py-1">
+                    <td className="border border-blue-200 px-2 py-1 w-[110px]">
                       <input
-                        type="text"
-                        className="w-full rounded border px-1 py-0.5"
-                        value={r.route}
+                        type="number"
+                        className="w-full rounded-md border border-blue-200 px-1 py-0.5 text-right"
+                        value={r.consumption ?? ""}
                         onChange={(e) =>
-                          updateRow(i, "route", e.target.value)
+                          updateRow(i, "consumption", e.target.value)
                         }
                       />
                     </td>
 
-                    <td className="border-b px-2 py-1">
-                      <input
-                        type="text"
-                        className="w-full rounded border px-1 py-0.5"
-                        value={r.note}
-                        onChange={(e) =>
-                          updateRow(i, "note", e.target.value)
-                        }
-                      />
-                    </td>
+                <td className="border border-blue-200 px-2 py-1 w-[130px]">
+                  <input
+                    type="number"
+                    className="w-full rounded-md border border-blue-200 px-1 py-0.5 text-right"
+                    value={r.fuelRemaining ?? ""}
+                    onChange={(e) =>
+                      updateRow(i, "fuelRemaining", e.target.value)
+                    }
+                  />
+                </td>
+
+                <td className="border border-blue-200 px-2 py-1 w-[130px]">
+                  <input
+                    type="number"
+                    className="w-full rounded-md border border-blue-200 px-1 py-0.5 text-right"
+                    value={r.refuel ?? ""}
+                    onChange={(e) =>
+                      updateRow(i, "refuel", e.target.value)
+                    }
+                  />
+                </td>
+
+                <td className="border border-blue-200 px-2 py-1">
+                  <input
+                    type="text"
+                    className="w-full rounded-md border border-blue-200 px-1 py-0.5"
+                    value={r.route}
+                    onChange={(e) =>
+                      updateRow(i, "route", e.target.value)
+                    }
+                  />
+                </td>
+
+                <td className="border border-blue-200 px-2 py-1">
+                  <input
+                    type="text"
+                    className="w-full rounded-md border border-blue-200 px-1 py-0.5"
+                    value={r.note}
+                    onChange={(e) =>
+                      updateRow(i, "note", e.target.value)
+                    }
+                  />
+                </td>
                   </tr>
                 ))}
               </tbody>
 
               <tfoot>
                 <tr className="bg-zinc-100 font-semibold">
-                  <td className="px-2 py-2" colSpan={3}>
+                  <td
+                    className="border border-blue-200 px-2 py-2 rounded-bl-xl"
+                    colSpan={3}
+                  >
                     Spolu km za mesiac
                   </td>
-                  <td className="px-2 py-2 text-right">{show(totalKm)}</td>
-                  <td colSpan={2}></td>
+                  <td className="border border-blue-200 px-2 py-2 text-right">
+                    {show(totalKm)}
+                  </td>
+                  <td
+                    className="border border-blue-200 px-2 py-2 rounded-br-xl"
+                    colSpan={3}
+                  ></td>
                 </tr>
               </tfoot>
             </table>
