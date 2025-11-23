@@ -10,7 +10,7 @@ type DayRow = {
   diff: number | null;
   consumption: number | null;
   fuelRemaining: number | null;
-  refuel: number | null;      // NOVÉ
+  refuel: number | null; // NOVÉ
   route: string;
   note: string;
 };
@@ -50,7 +50,7 @@ function createEmptyRows(): DayRow[] {
     diff: null,
     consumption: null,
     fuelRemaining: null,
-    refuel: null,       // NOVÉ
+    refuel: null, // NOVÉ
     route: "",
     note: "",
   }));
@@ -111,10 +111,7 @@ export default function HomePage() {
   useEffect(() => {
     if (!vehicles.length) return;
     try {
-      window.localStorage.setItem(
-        VEHICLES_STORAGE_KEY,
-        JSON.stringify(vehicles)
-      );
+      window.localStorage.setItem(VEHICLES_STORAGE_KEY, JSON.stringify(vehicles));
     } catch {
       // ignore
     }
@@ -182,15 +179,15 @@ export default function HomePage() {
         }
       }
 
-          if (
-            field === "diff" ||
-            field === "consumption" ||
-            field === "fuelRemaining" ||
-            field === "refuel"            // NOVÉ
-          ) {
-            const num = value === "" ? null : Number(value.replace(",", "."));
-            (row as any)[field] = Number.isNaN(num) ? null : num;
-          }
+      if (
+        field === "diff" ||
+        field === "consumption" ||
+        field === "fuelRemaining" ||
+        field === "refuel" // NOVÉ
+      ) {
+        const num = value === "" ? null : Number(value.replace(",", "."));
+        (row as any)[field] = Number.isNaN(num) ? null : num;
+      }
 
       if (field === "route" || field === "note") {
         (row as any)[field] = value;
@@ -203,27 +200,25 @@ export default function HomePage() {
 
   const totalKm = rows.reduce((sum, r) => sum + (r.diff ?? 0), 0);
 
-  const currentVehicle =
-    vehicles.find((v) => v.id === currentVehicleId) ?? null;
+  const currentVehicle = vehicles.find((v) => v.id === currentVehicleId) ?? null;
 
   const currentVehicleLabel = currentVehicle?.label ?? "Vozidlo";
 
   const currentMonthLabel =
-    MONTHS.find((m) => m.id === currentMonth)?.label ??
-    `Mesiac ${currentMonth}`;
+    MONTHS.find((m) => m.id === currentMonth)?.label ?? `Mesiac ${currentMonth}`;
 
-      const filledRowsCount = rows.filter((r) => {
-        return (
-          r.startKm != null ||
-          r.endKm != null ||
-          r.diff != null ||
-          r.consumption != null ||
-          r.fuelRemaining != null ||
-          r.refuel != null ||                        // NOVÉ
-          (r.route && r.route.trim() !== "") ||
-          (r.note && r.note.trim() !== "")
-        );
-      }).length;
+  const filledRowsCount = rows.filter((r) => {
+    return (
+      r.startKm != null ||
+      r.endKm != null ||
+      r.diff != null ||
+      r.consumption != null ||
+      r.fuelRemaining != null ||
+      r.refuel != null || // NOVÉ
+      (r.route && r.route.trim() !== "") ||
+      (r.note && r.note.trim() !== "")
+    );
+  }).length;
 
   function handleAddVehicle() {
     const name = newVehicleName.trim();
@@ -470,7 +465,7 @@ export default function HomePage() {
           </p>
           <input
             type="password"
-            className="w-full rounded border border-zinc-300 px-3 py-2 text-sm mb-3"
+            className="w-full rounded border border-zinc-300 px-3 py-2 text-sm text-zinc-900 mb-3"
             placeholder="Heslo"
             value={passwordInput}
             onChange={(e) => setPasswordInput(e.target.value)}
@@ -486,10 +481,10 @@ export default function HomePage() {
     );
   }
 
-  // ====== HLAVNÁ APPKA ======
-  return (
-    <div className="min-h-screen bg-zinc-50 text-zinc-900 dark:bg-black dark:text-zinc-50">
-      <main className="mx-auto max-w-5xl px-3 py-4 sm:px-4 sm:py-6">
+// ====== HLAVNÁ APPKA ======
+      return (
+  <div className="min-h-screen bg-zinc-50 text-zinc-900">
+    <main className="mx-auto max-w-5xl px-3 py-4 sm:px-4 sm:py-6">
         {/* HLAVIČKA */}
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -504,7 +499,7 @@ export default function HomePage() {
             <div className="flex items-center gap-2">
               <span className="text-xs sm:text-sm">Vozidlo:</span>
               <select
-                className="rounded border border-zinc-300 bg-white px-2 py-1 text-xs sm:text-sm"
+                className="rounded border border-zinc-300 bg-white px-2 py-1 text-xs sm:text-sm text-zinc-900"
                 value={currentVehicleId}
                 onChange={(e) => setCurrentVehicleId(e.target.value)}
               >
@@ -520,7 +515,7 @@ export default function HomePage() {
             <div className="flex items-center gap-2">
               <span className="text-xs sm:text-sm">Mesiac:</span>
               <select
-                className="rounded border border-zinc-300 bg-white px-2 py-1 text-xs sm:text-sm"
+                className="rounded border border-zinc-300 bg-white px-2 py-1 text-xs sm:text-sm text-zinc-900"
                 value={currentMonth}
                 onChange={(e) => setCurrentMonth(Number(e.target.value))}
               >
@@ -535,10 +530,10 @@ export default function HomePage() {
         </div>
 
         {/* INFO */}
-        <div className="mb-4 text-xs text-zinc-600 sm:text-sm dark:text-zinc-400">
-          Dáta sa ukladajú pre každé vozidlo a mesiac zvlášť (v tomto
-          prehliadači).
-        </div>
+          <div className="mb-4 text-xs text-zinc-600 sm:text-sm">
+            Dáta sa ukladajú pre každé vozidlo a mesiac zvlášť (v tomto
+            prehliadači).
+          </div>
 
         {/* SPRÁVA VOZIDIEL */}
         <div className="mb-4 flex flex-col gap-3 sm:mb-5 sm:flex-row sm:items-start sm:justify-between">
@@ -557,7 +552,7 @@ export default function HomePage() {
             <div className="flex gap-2">
               <input
                 type="text"
-                className="flex-1 rounded border border-zinc-300 bg-white px-3 py-2 text-sm"
+                className="flex-1 rounded border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900"
                 value={newVehicleName}
                 placeholder="Napr. Škoda Octavia KE123AB"
                 onChange={(e) => setNewVehicleName(e.target.value)}
@@ -630,7 +625,7 @@ export default function HomePage() {
                   </div>
                   <input
                     type="number"
-                    className="mt-0.5 w-full rounded border border-zinc-300 bg-white px-2 py-1 text-sm"
+                    className="mt-0.5 w-full rounded border border-zinc-300 bg-white px-2 py-1 text-sm text-zinc-900"
                     value={r.startKm ?? ""}
                     onChange={(e) => updateRow(i, "startKm", e.target.value)}
                     inputMode="numeric"
@@ -642,7 +637,7 @@ export default function HomePage() {
                   </div>
                   <input
                     type="number"
-                    className="mt-0.5 w-full rounded border border-zinc-300 bg-white px-2 py-1 text-sm"
+                    className="mt-0.5 w-full rounded border border-zinc-300 bg-white px-2 py-1 text-sm text-zinc-900"
                     value={r.endKm ?? ""}
                     onChange={(e) => updateRow(i, "endKm", e.target.value)}
                     inputMode="numeric"
@@ -654,7 +649,7 @@ export default function HomePage() {
                 <div className="text-[11px] text-zinc-500">Najazdené km</div>
                 <input
                   type="number"
-                  className="mt-0.5 w-full rounded border border-zinc-300 bg-white px-2 py-1 text-right text-sm"
+                  className="mt-0.5 w-full rounded border border-zinc-300 bg-white px-2 py-1 text-right text-sm text-zinc-900"
                   value={r.diff ?? ""}
                   onChange={(e) => updateRow(i, "diff", e.target.value)}
                   inputMode="numeric"
@@ -665,7 +660,7 @@ export default function HomePage() {
                 <div className="text-[11px] text-zinc-500">Spotreba</div>
                 <input
                   type="number"
-                  className="mt-0.5 w-full rounded border border-zinc-300 bg-white px-2 py-1 text-right text-sm"
+                  className="mt-0.5 w-full rounded border border-zinc-300 bg-white px-2 py-1 text-right text-sm text-zinc-900"
                   value={r.consumption ?? ""}
                   onChange={(e) => updateRow(i, "consumption", e.target.value)}
                   inputMode="numeric"
@@ -678,7 +673,7 @@ export default function HomePage() {
                 </div>
                 <input
                   type="number"
-                  className="mt-0.5 w-full rounded border border-zinc-300 bg-white px-2 py-1 text-right text-sm"
+                  className="mt-0.5 w-full rounded border border-zinc-300 bg-white px-2 py-1 text-right text-sm text-zinc-900"
                   value={r.fuelRemaining ?? ""}
                   onChange={(e) =>
                     updateRow(i, "fuelRemaining", e.target.value)
@@ -688,21 +683,21 @@ export default function HomePage() {
               </div>
 
               <div className="mb-2">
-              <div className="text-[11px] text-zinc-500">Tankovanie (L)</div>
-              <input
-                type="number"
-                className="mt-0.5 w-full rounded border border-zinc-300 bg-white px-2 py-1 text-right text-sm"
-                value={r.refuel ?? ""}
-                onChange={(e) => updateRow(i, "refuel", e.target.value)}
-                inputMode="numeric"
-              />
-            </div>
+                <div className="text-[11px] text-zinc-500">Tankovanie (L)</div>
+                <input
+                  type="number"
+                  className="mt-0.5 w-full rounded border border-zinc-300 bg-white px-2 py-1 text-right text-sm text-zinc-900"
+                  value={r.refuel ?? ""}
+                  onChange={(e) => updateRow(i, "refuel", e.target.value)}
+                  inputMode="numeric"
+                />
+              </div>
 
               <div className="mb-2">
                 <div className="text-[11px] text-zinc-500">Poznámka</div>
                 <input
                   type="text"
-                  className="mt-0.5 w-full rounded border border-zinc-300 bg-white px-2 py-1 text-sm"
+                  className="mt-0.5 w-full rounded border border-zinc-300 bg-white px-2 py-1 text-sm text-zinc-900"
                   value={r.note}
                   onChange={(e) => updateRow(i, "note", e.target.value)}
                 />
@@ -712,7 +707,7 @@ export default function HomePage() {
                 <div className="text-[11px] text-zinc-500">Trasa</div>
                 <input
                   type="text"
-                  className="mt-0.5 w-full rounded border border-zinc-300 bg-white px-2 py-1 text-sm"
+                  className="mt-0.5 w-full rounded border border-zinc-300 bg-white px-2 py-1 text-sm text-zinc-900"
                   value={r.route}
                   onChange={(e) => updateRow(i, "route", e.target.value)}
                 />
@@ -783,7 +778,7 @@ export default function HomePage() {
                     <td className="border border-blue-200 px-2 py-1 w-[110px]">
                       <input
                         type="number"
-                        className="w-full rounded-md border border-blue-200 px-1 py-0.5"
+                        className="w-full rounded-md border border-blue-200 px-1 py-0.5 text-zinc-900"
                         value={r.startKm ?? ""}
                         onChange={(e) =>
                           updateRow(i, "startKm", e.target.value)
@@ -794,7 +789,7 @@ export default function HomePage() {
                     <td className="border border-blue-200 px-2 py-1 w-[110px]">
                       <input
                         type="number"
-                        className="w-full rounded-md border border-blue-200 px-1 py-0.5"
+                        className="w-full rounded-md border border-blue-200 px-1 py-0.5 text-zinc-900"
                         value={r.endKm ?? ""}
                         onChange={(e) =>
                           updateRow(i, "endKm", e.target.value)
@@ -805,7 +800,7 @@ export default function HomePage() {
                     <td className="border border-blue-200 px-2 py-1 w-[110px]">
                       <input
                         type="number"
-                        className="w-full rounded-md border border-blue-200 px-1 py-0.5 text-right"
+                        className="w-full rounded-md border border-blue-200 px-1 py-0.5 text-right text-zinc-900"
                         value={r.diff ?? ""}
                         onChange={(e) => updateRow(i, "diff", e.target.value)}
                       />
@@ -814,7 +809,7 @@ export default function HomePage() {
                     <td className="border border-blue-200 px-2 py-1 w-[110px]">
                       <input
                         type="number"
-                        className="w-full rounded-md border border-blue-200 px-1 py-0.5 text-right"
+                        className="w-full rounded-md border border-blue-200 px-1 py-0.5 text-right text-zinc-900"
                         value={r.consumption ?? ""}
                         onChange={(e) =>
                           updateRow(i, "consumption", e.target.value)
@@ -822,49 +817,49 @@ export default function HomePage() {
                       />
                     </td>
 
-                <td className="border border-blue-200 px-2 py-1 w-[130px]">
-                  <input
-                    type="number"
-                    className="w-full rounded-md border border-blue-200 px-1 py-0.5 text-right"
-                    value={r.fuelRemaining ?? ""}
-                    onChange={(e) =>
-                      updateRow(i, "fuelRemaining", e.target.value)
-                    }
-                  />
-                </td>
+                    <td className="border border-blue-200 px-2 py-1 w-[130px]">
+                      <input
+                        type="number"
+                        className="w-full rounded-md border border-blue-200 px-1 py-0.5 text-right text-zinc-900"
+                        value={r.fuelRemaining ?? ""}
+                        onChange={(e) =>
+                          updateRow(i, "fuelRemaining", e.target.value)
+                        }
+                      />
+                    </td>
 
-                <td className="border border-blue-200 px-2 py-1 w-[130px]">
-                  <input
-                    type="number"
-                    className="w-full rounded-md border border-blue-200 px-1 py-0.5 text-right"
-                    value={r.refuel ?? ""}
-                    onChange={(e) =>
-                      updateRow(i, "refuel", e.target.value)
-                    }
-                  />
-                </td>
+                    <td className="border border-blue-200 px-2 py-1 w-[130px]">
+                      <input
+                        type="number"
+                        className="w-full rounded-md border border-blue-200 px-1 py-0.5 text-right text-zinc-900"
+                        value={r.refuel ?? ""}
+                        onChange={(e) =>
+                          updateRow(i, "refuel", e.target.value)
+                        }
+                      />
+                    </td>
 
-                <td className="border border-blue-200 px-2 py-1">
-                  <input
-                    type="text"
-                    className="w-full rounded-md border border-blue-200 px-1 py-0.5"
-                    value={r.route}
-                    onChange={(e) =>
-                      updateRow(i, "route", e.target.value)
-                    }
-                  />
-                </td>
+                    <td className="border border-blue-200 px-2 py-1">
+                      <input
+                        type="text"
+                        className="w-full rounded-md border border-blue-200 px-1 py-0.5 text-zinc-900"
+                        value={r.route}
+                        onChange={(e) =>
+                          updateRow(i, "route", e.target.value)
+                        }
+                      />
+                    </td>
 
-                <td className="border border-blue-200 px-2 py-1">
-                  <input
-                    type="text"
-                    className="w-full rounded-md border border-blue-200 px-1 py-0.5"
-                    value={r.note}
-                    onChange={(e) =>
-                      updateRow(i, "note", e.target.value)
-                    }
-                  />
-                </td>
+                    <td className="border border-blue-200 px-2 py-1">
+                      <input
+                        type="text"
+                        className="w-full rounded-md border border-blue-200 px-1 py-0.5 text-zinc-900"
+                        value={r.note}
+                        onChange={(e) =>
+                          updateRow(i, "note", e.target.value)
+                        }
+                      />
+                    </td>
                   </tr>
                 ))}
               </tbody>
